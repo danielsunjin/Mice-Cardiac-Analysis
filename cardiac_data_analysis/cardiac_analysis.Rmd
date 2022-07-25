@@ -1,0 +1,82 @@
+---
+title: "cardiac analysis"
+author: "Daniel Jin"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+library(tidyverse)
+library(cowplot)
+library(gplots)
+library(ggplot2)
+library(patternplot)
+library(lme4)
+library(visreg)
+library(tidyr)
+library(magrittr) 
+library(dplyr)
+library(ggpubr)
+library(lme4)
+library(lsmeans)
+library(emmeans)
+library(zoo)
+library(stringr)
+library(lmerTest)
+
+cardiac_data <- read.csv('~/Documents/cardiac_data_analysis/Cardiac_Analysis_072522.csv') %>% 
+  mutate(Animal_ID = str_replace(Mouse_ID, '-', '_')) %>%
+  mutate(Animal_ID = str_replace(Animal_ID, ':0', '')) %>%
+  mutate(Animal_ID = trimws(Animal_ID)) %>%
+  select(Animal_ID, Sex, Age, Mass, Diet, Genotype, Diastolic_LV_Volume, Systolic_LV_Volume, Stroke_Volume, Ejection_Fraction, Heart_Rate, Cardiac_Output) %>%
+  filter(Animal_ID != '') %>%
+  filter(Genotype != 'APOE-/-') %>%
+  filter(!is.na(Diastolic_LV_Volume))
+
+count <- cardiac_data %>%
+  select(Sex, Diet, Genotype) %>%
+  group_by(Sex, Diet, Genotype) %>%
+  summarise(Count = n())
+
+```
+
+```{r graphs-and-stats}
+
+lm1 <- lm(Diastolic_LV_Volume ~ factor(Sex)*Age*Mass*factor(Diet)*factor(Genotype), cardiac_data)
+anova(lm1)
+
+lm2 <- lm(Systolic_LV_Volume ~ factor(Sex)*Age*Mass*factor(Diet)*factor(Genotype), cardiac_data)
+anova(lm2)
+
+lm3 <- lm(Stroke_Volume ~ factor(Sex)*Age*Mass*factor(Diet)*factor(Genotype), cardiac_data)
+anova(lm3)
+
+lm4 <- lm(Ejection_Fraction ~ factor(Sex)*Age*Mass*factor(Diet)*factor(Genotype), cardiac_data)
+anova(lm4)
+
+lm5 <- lm(Heart_Rate ~ factor(Sex)*Age*Mass*factor(Diet)*factor(Genotype), cardiac_data)
+anova(lm5)
+
+lm6 <- lm(Cardiac_Output ~ factor(Sex)*Age*Mass*factor(Diet)*factor(Genotype), cardiac_data)
+anova(lm6)
+
+ggplot(data = cardiac_data, aes(fill = Genotype, factor(Genotype), Diastolic_LV_Volume)) +
+  geom_violin(alpha = 0.25) +
+  geom_boxplot(width = 0.1, alpha = 0.25) +
+  theme_bw() +
+  facet_grid(.~Diet) + 
+  geom_jitter(height = 0, width = 0.2, aes(color = Genotype)) +
+  labs(title='Diastolic_LV_Volume by Genotype and Diet', y = 'Diastolic_LV_Volume', x='Genotype')
+
+dodge <- position_dodge(width = 0.8)
+ggplot(data = cardiac_data, aes(fill = Sex, x = factor(Genotype), y = Systolic_LV_Volume)) +
+  geom_violin(position = dodge, alpha = 0.25) +
+  geom_boxplot(width = 0.1, position = dodge, alpha = 0.25) +
+  theme_bw() +
+  facet_grid(.~Diet) + 
+  geom_point(position=position_jitterdodge(jitter.width = 0.3), aes(color = Sex)) +
+  labs(title='Systolic_LV_Volume by Genotype, Sex, Diet', y = 'Systolic_LV_Volume', x='Genotype')
+
+```
