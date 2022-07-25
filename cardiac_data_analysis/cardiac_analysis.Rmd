@@ -80,3 +80,15 @@ ggplot(data = cardiac_data, aes(fill = Sex, x = factor(Genotype), y = Systolic_L
   labs(title='Systolic_LV_Volume by Genotype, Sex, Diet', y = 'Systolic_LV_Volume', x='Genotype')
 
 ```
+
+```{r posthocs}
+
+lm7 <- lm(Diastolic_LV_Volume ~ factor(Genotype), cardiac_data)
+anova(lm7)
+emmeans(lm7, list(pairwise ~ factor(Genotype)), adjust="tukey")
+
+lm8 <- lm(Systolic_LV_Volume ~ factor(Genotype), cardiac_data)
+anova(lm8)
+emmeans(lm8, list(pairwise ~ factor(Genotype)), adjust="tukey")
+
+```
