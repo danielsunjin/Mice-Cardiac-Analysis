@@ -37,12 +37,15 @@ cardiac_data <- read.csv('~/Documents/cardiac_data_analysis/Cardiac_Analysis_072
 
 count <- cardiac_data %>%
   select(Sex, Diet, Genotype) %>%
-  group_by(Sex, Diet, Genotype) %>%
+  group_by(Diet, Genotype, Sex) %>%
   summarise(Count = n())
 
 ```
 
 ```{r graphs-and-stats}
+
+print('Mice count')
+print(count)
 
 lm1 <- lm(Diastolic_LV_Volume ~ factor(Sex)*Age*Mass*factor(Diet)*factor(Genotype), cardiac_data)
 anova(lm1)
@@ -50,25 +53,34 @@ anova(lm1)
 lm2 <- lm(Systolic_LV_Volume ~ factor(Sex)*Age*Mass*factor(Diet)*factor(Genotype), cardiac_data)
 anova(lm2)
 
-lm3 <- lm(Stroke_Volume ~ factor(Sex)*Age*Mass*factor(Diet)*factor(Genotype), cardiac_data)
-anova(lm3)
+# lm3 <- lm(Stroke_Volume ~ factor(Sex)*Age*Mass*factor(Diet)*factor(Genotype), cardiac_data)
+# anova(lm3)
+# 
+# lm4 <- lm(Ejection_Fraction ~ factor(Sex)*Age*Mass*factor(Diet)*factor(Genotype), cardiac_data)
+# anova(lm4)
+# 
+# lm5 <- lm(Heart_Rate ~ factor(Sex)*Age*Mass*factor(Diet)*factor(Genotype), cardiac_data)
+# anova(lm5)
+# 
+# lm6 <- lm(Cardiac_Output ~ factor(Sex)*Age*Mass*factor(Diet)*factor(Genotype), cardiac_data)
+# anova(lm6)
 
-lm4 <- lm(Ejection_Fraction ~ factor(Sex)*Age*Mass*factor(Diet)*factor(Genotype), cardiac_data)
-anova(lm4)
+# ggplot(data = cardiac_data, aes(fill = Genotype, factor(Genotype), Diastolic_LV_Volume)) +
+#   geom_violin(alpha = 0.25) +
+#   geom_boxplot(width = 0.1, alpha = 0.25) +
+#   theme_bw() +
+#   facet_grid(.~Diet) + 
+#   geom_jitter(height = 0, width = 0.2, aes(color = Genotype)) +
+#   labs(title='Diastolic_LV_Volume by Genotype and Diet', y = 'Diastolic_LV_Volume', x='Genotype')
 
-lm5 <- lm(Heart_Rate ~ factor(Sex)*Age*Mass*factor(Diet)*factor(Genotype), cardiac_data)
-anova(lm5)
-
-lm6 <- lm(Cardiac_Output ~ factor(Sex)*Age*Mass*factor(Diet)*factor(Genotype), cardiac_data)
-anova(lm6)
-
-ggplot(data = cardiac_data, aes(fill = Genotype, factor(Genotype), Diastolic_LV_Volume)) +
-  geom_violin(alpha = 0.25) +
-  geom_boxplot(width = 0.1, alpha = 0.25) +
+dodge <- position_dodge(width = 0.8)
+ggplot(data = cardiac_data, aes(fill = Sex, x = factor(Genotype), y = Diastolic_LV_Volume)) +
+  geom_violin(position = dodge, alpha = 0.25) +
+  geom_boxplot(width = 0.1, position = dodge, alpha = 0.25) +
   theme_bw() +
   facet_grid(.~Diet) + 
-  geom_jitter(height = 0, width = 0.2, aes(color = Genotype)) +
-  labs(title='Diastolic_LV_Volume by Genotype and Diet', y = 'Diastolic_LV_Volume', x='Genotype')
+  geom_point(position=position_jitterdodge(jitter.width = 0.3), aes(color = Sex)) +
+  labs(title='Diastolic_LV_Volume by Genotype, Sex, Diet', y = 'Diastolic_LV_Volume', x='Genotype')
 
 dodge <- position_dodge(width = 0.8)
 ggplot(data = cardiac_data, aes(fill = Sex, x = factor(Genotype), y = Systolic_LV_Volume)) +
@@ -83,12 +95,47 @@ ggplot(data = cardiac_data, aes(fill = Sex, x = factor(Genotype), y = Systolic_L
 
 ```{r posthocs}
 
-lm7 <- lm(Diastolic_LV_Volume ~ factor(Genotype), cardiac_data)
-anova(lm7)
-emmeans(lm7, list(pairwise ~ factor(Genotype)), adjust="tukey")
+#emmeans(lm1, list(pairwise ~ factor(Genotype)*factor(Sex)), adjust="tukey")
+#emmeans(lm1, list(pairwise ~ factor(Genotype)*factor(Sex)|factor(Diet)), adjust="tukey")
+# 
+# em1 <- emmeans(lm1, list(pairwise ~ factor(Genotype)*factor(Sex)|factor(Diet)), adjust="tukey")
+# em1 <- na.omit(as.data.frame(em1$`pairwise differences of Genotype, Sex | Diet`)) %>% arrange(p.value)
+# 
+# em2 <- emmeans(lm2, list(pairwise ~ factor(Genotype)*factor(Sex)|factor(Diet)), adjust="tukey")
+# em2 <- na.omit(as.data.frame(em2$`pairwise differences of Genotype, Sex | Diet`)) %>% arrange(p.value)
 
-lm8 <- lm(Systolic_LV_Volume ~ factor(Genotype), cardiac_data)
-anova(lm8)
-emmeans(lm8, list(pairwise ~ factor(Genotype)), adjust="tukey")
+group_similarity <- function(comparisons) {
+  output <- c()
+  for (i in comparisons) {
+    x <- unlist(strsplit(i, " "))
+    a <- x[1:3]
+    b <- x[5:7]
+    output <- append(output, length(intersect(a, b)))
+  }
+  return(output)
+}
+
+lm7 <- lm(Diastolic_LV_Volume ~ factor(Genotype)*factor(Sex)*factor(Diet), cardiac_data)
+# anova(lm7)
+em3 <- emmeans(lm7, list(pairwise ~ factor(Genotype)*factor(Sex)*factor(Diet)), adjust="tukey")
+em3 <- na.omit(as.data.frame(em3$`pairwise differences of Genotype, Sex, Diet`)) %>% 
+  arrange(p.value) %>% 
+  filter(p.value < 0.05) 
+colnames(em3) <- c('comparison','estimate','SE', 'df', 't.ratio', 'p.value')
+# em3 <- em3 %>% filter(group_similarity(comparison) == 2)
+print('Significant pairwise differences of genotype, sex, and diet in Diastolic_LV_Volume')
+print(em3)
+
+
+lm8 <- lm(Systolic_LV_Volume ~ factor(Genotype)*factor(Sex)*factor(Diet), cardiac_data)
+# anova(lm8)
+em4 <- emmeans(lm8, list(pairwise ~ factor(Genotype)*factor(Sex)*factor(Diet)), adjust="tukey")
+em4 <- na.omit(as.data.frame(em4$`pairwise differences of Genotype, Sex, Diet`)) %>% 
+  arrange(p.value) %>% 
+  filter(p.value < 0.05)
+colnames(em4) <- c('comparison','estimate','SE', 'df', 't.ratio', 'p.value')
+# em4 <- em4 %>% filter(group_similarity(comparison) == 2)
+print('Significant pairwise differences of genotype, sex, and diet in Systolic_LV_Volume')
+print(em4)
 
 ```
